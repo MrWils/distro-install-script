@@ -16,8 +16,10 @@
 
 # Different users can have different packages in guix.
 # This script installs all the packages for the non-root user.
+# I install XFCE4 just in case that I have problems with EXWM.
+# This has not happened yet.
 readonly GUIX_PACKAGES="libreoffice testdisk keepassxc acpi mplayer icecat git 
-wicd maim xrandr"
+wicd maim xrandr xfce4-session xfce4-panel"
 
 # Default packages of the netinstaller which you don't want.
 # Apt will remove those packages.
@@ -138,4 +140,7 @@ chown -R $USERNAME /home/$USERNAME
 export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
 export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
 export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
+export X_XFCE4_LIB_DIRS="$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS"
+export XDG_DATA_DIRS="$HOME/.guix-profile/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS"
+export GIO_EXTRA_MODULES="$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES"
 exit 0
