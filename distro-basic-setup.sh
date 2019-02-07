@@ -92,6 +92,10 @@ export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
 # Setup guix
 guix package -i glibc-utf8-locales
 export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
+guix package -i nss-certs
+export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
+export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
+export GIT_SSL_CAINFO="$SSL_CERT_FILE"
 guix refresh
 guix pull
 guix package -u
@@ -138,6 +142,9 @@ chown -R $USERNAME /home/$USERNAME
 
 # /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
 export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
+export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
+export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
+export GIT_SSL_CAINFO="$SSL_CERT_FILE"
 export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
 export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
 export X_XFCE4_LIB_DIRS="$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS"
