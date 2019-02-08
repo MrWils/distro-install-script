@@ -48,6 +48,11 @@ testing non-free contrib main"
 # Custom host file (which blocks ads) 
 readonly HOSTS="https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 
+# Hide grub
+readonly HIDE_GRUB=true
+# Name in grub menu
+readonly GRUB_DISTRIBUTOR="GNU+Devuan+Guix"
+
 # X and Emacs might crash or give errors
 # if you remove one of these packages.
 readonly ESSENTIAL_GUIX_PACKAGES="font-hack font-misc-misc xinit 
@@ -55,7 +60,7 @@ xf86-input-evdev emacs xf86-input-keyboard xf86-input-mouse xf86-input-synaptics
 xf86-video-nouveau"
 # sct" the sct package does not work on guix for some reason
 # but it is essential for my init script
-readonly ESSENTIAL_APT_PACKAGES="curl dirmngr sct"
+readonly ESSENTIAL_APT_PACKAGES="curl dirmngr sct ca-certificates"
 
 # SCRIPT
 # ______
@@ -105,6 +110,18 @@ apt -y autoremove
 
 # Install packages as non-root user
 su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" -s /bin/sh $USER
+
+# Hide grub
+if [[ $HIDE_GRUB = true ]]; then
+/bin/cat <<EOM >/etc/default/grub
+GRUB_DEFAULT=0
+GRUB_HIDDEN_TIMEOUT=0
+GRUB_HIDDEN_TIMEOUT_QUIET=true
+GRUB_DISTRIBUTOR="$GRUB_DISTRIBUTOR"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX=""
+EOM
+fi
 
 # Symlink the packages to root
 rm -rf ~/.guix-profile
