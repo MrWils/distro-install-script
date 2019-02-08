@@ -77,6 +77,9 @@ then
     apt update
 fi
 
+# Install required apt packages
+apt -y --no-install-recommends install $ESSENTIAL_APT_PACKAGES
+
 # Guix package manager
 gpg --keyserver pool.sks-keyservers.net \
     --recv-keys 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
