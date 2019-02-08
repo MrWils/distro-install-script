@@ -16,14 +16,16 @@
 
 # Different users can have different packages in guix.
 # This script installs all the packages for the non-root user.
+# It also symlinks it to root so that they have the same packages.
 # I install XFCE4 just in case that I have problems with EXWM.
 # This has not happened yet.
 readonly GUIX_PACKAGES="libreoffice testdisk keepassxc acpi mplayer icecat git 
-wicd maim xrandr xfce4-session xfce4-panel"
+wicd maim xrandr xfce4-session xfce4-panel rsync"
 
 # Default packages of the netinstaller which you don't want.
 # Apt will remove those packages.
-readonly PACKAGES_TO_REMOVE="bluez bluetooth vim-common vim-tiny vi"
+readonly PACKAGES_TO_REMOVE="bluez bluetooth vim-common vim-tiny laptop-detect 
+popularity-contest xxd"
 
 # The email address which you use for git
 # You don't have to use a grep but it is useful,
@@ -44,15 +46,16 @@ readonly DEBIAN_REPO="deb http://http.us.debian.org/debian/
 testing non-free contrib main"
 
 # Custom host file (which blocks ads) 
-readonly HOSTS=\
-         "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+readonly HOSTS="https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 
 # X and Emacs might crash or give errors
 # if you remove one of these packages.
 readonly ESSENTIAL_GUIX_PACKAGES="font-hack font-misc-misc xinit 
 xf86-input-evdev emacs xf86-input-keyboard xf86-input-mouse xf86-input-synaptics 
-xf86-video-nouveau sct"
-
+xf86-video-nouveau"
+# sct" the sct package does not work on guix for some reason
+# but it is essential for my init script
+readonly ESSENTIAL_APT_PACKAGES="curl dirmngr sct"
 
 # SCRIPT
 # ______
@@ -77,21 +80,14 @@ fi
 # Guix package manager
 gpg --keyserver pool.sks-keyservers.net \
     --recv-keys 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
-bash <(\
-       curl -s \
-            https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh\
-    )
-
-# MAKE SCRIPT FOR GUIX
-export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
-export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
-export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
-
+bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh)
 # Start guix daemon
 /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
 # Setup guix
 guix package -i glibc-utf8-locales
 export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
+export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
+export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
 guix package -i nss-certs
 export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
 export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
@@ -102,11 +98,14 @@ guix package -u
 
 # Remove packages
 apt -y purge $PACKAGES_TO_REMOVE
+apt -y autoremove
 
-# Install packages
-su $USER
-guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES
-exit
+# Install packages as non-root user
+su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" -s /bin/sh $USER
+
+# Symlink the packages to root
+rm -rf ~/.guix-profile
+ln -sf /home/$USER/.guix-profile ~/.guix-profile
 
 # Configure git
 git config --global user.name $GIT_EMAIL
