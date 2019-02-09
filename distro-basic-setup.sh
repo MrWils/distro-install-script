@@ -19,13 +19,13 @@
 # It also symlinks it to root so that they have the same packages.
 # I install XFCE4 just in case that I have problems with EXWM.
 # This has not happened yet.
-readonly GUIX_PACKAGES="libreoffice testdisk keepassxc acpi mplayer icecat git 
-wicd maim xrandr xfce4-session xfce4-panel rsync"
+readonly GUIX_PACKAGES="acpi git icecat keepassxc libreoffice maim mplayer rsync 
+testdisk wicd xfce4-panel xfce4-session xrandr"
 
 # Default packages of the netinstaller which you don't want.
 # Apt will remove those packages.
-readonly PACKAGES_TO_REMOVE="bluez bluetooth vim-common vim-tiny laptop-detect 
-popularity-contest xxd"
+readonly PACKAGES_TO_REMOVE="bluetooth bluez laptop-detect popularity-contest 
+vim-common vim-tiny xxd"
 
 # The email address which you use for git
 # You don't have to use a grep but it is useful,
@@ -55,12 +55,12 @@ readonly GRUB_DISTRIBUTOR="GNU+Devuan+Guix"
 
 # X and Emacs might crash or give errors
 # if you remove one of these packages.
-readonly ESSENTIAL_GUIX_PACKAGES="font-hack font-misc-misc xinit 
-xf86-input-evdev emacs xf86-input-keyboard xf86-input-mouse xf86-input-synaptics 
-xf86-video-nouveau"
+readonly ESSENTIAL_GUIX_PACKAGES="emacs font-hack font-misc-misc 
+xf86-input-evdev xf86-input-keyboard xf86-input-mouse 
+xf86-input-synaptics xf86-video-nouveau xinit"
 # sct" the sct package does not work on guix for some reason
 # but it is essential for my init script
-readonly ESSENTIAL_APT_PACKAGES="curl dirmngr sct ca-certificates"
+readonly ESSENTIAL_APT_PACKAGES="ca-certificates curl dirmngr sct"
 
 # SCRIPT
 # ______
@@ -92,53 +92,101 @@ bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install
 # Start guix daemon
 /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
 # Setup guix
-guix package -i glibc-utf8-locales
+su -c "guix package -i glibc-utf8-locales" -s /bin/sh $USERNAME
 export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
 export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
+export LC_ALL=en_US.UTF-8
 export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
-guix package -i nss-certs
+su -c "guix package -i nss-certs" -s /bin/sh $USERNAME
 export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
 export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
-export GIT_SSL_CAINFO="$SSL_CERT_FILE"
-guix refresh
-guix pull
-guix package -u
+su -c "guix refresh &&
+guix pull &&
+guix package -u" -s /bin/sh $USERNAME
 
 # Remove packages
 apt -y purge $PACKAGES_TO_REMOVE
 apt -y autoremove
 
 # Install packages as non-root user
-su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" -s /bin/sh $USER
+su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" -s /bin/sh $USERNAME
+
+# Create SysV startup for the guix-daemon
+/bin/cat <<EOM >/etc/init.d/guix-daemon
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          guix-daemon
+# Required-Start:    mountdevsubfs
+# Required-Stop:
+# Should-Start:
+# Should-Stop:
+# X-Start-Before:
+# X-Stop-After:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+### END INIT INFO
+
+SCRIPTNAME=/etc/init.d/guix-daemon
+
+. /lib/lsb/init-functions
+
+[ -x /root/.guix-profile/bin/guix-daemon ] || exit 0
+
+do_start()
+{
+        # /root/.guix-profile/bin/guix-daemon --build-users-group=guixbuild 2>/dev/null || return 2
+        /root/.guix-profile/bin/guix-daemon --build-users-group=guixbuild 2> /var/log/guix.log &
+}
+
+case "$1" in
+  start)
+        log_action_begin_msg "Setting up GNU Guix daemon"
+        do_start
+        case "$?" in
+                0|1) log_action_end_msg 0 ;;
+                2) log_action_end_msg 1 ;;
+        esac
+        ;;
+  stop|restart|force-reload|status)
+        log_action_begin_msg "Killing GNU Guix daemon"
+        killall guix-daemon
+        ;;
+  *)
+        echo "Usage: $SCRIPTNAME start" >&2
+        exit 3
+        ;;
+esac
+EOM
 
 # Hide grub
 if [[ $HIDE_GRUB = true ]]; then
 /bin/cat <<EOM >/etc/default/grub
+GRUB_CMDLINE_LINUX=""
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
 GRUB_DEFAULT=0
+GRUB_DISTRIBUTOR="$GRUB_DISTRIBUTOR"
 GRUB_HIDDEN_TIMEOUT=0
 GRUB_HIDDEN_TIMEOUT_QUIET=true
-GRUB_DISTRIBUTOR="$GRUB_DISTRIBUTOR"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
-GRUB_CMDLINE_LINUX=""
 EOM
 fi
+update-grub
 
 # Symlink the packages to root
 rm -rf ~/.guix-profile
 ln -sf /home/$USER/.guix-profile ~/.guix-profile
 
 # Configure git
-git config --global user.name $GIT_EMAIL
-git config --global user.email $GIT_EMAIL
 git config --global core.editor emacs
+git config --global user.email $GIT_EMAIL
+git config --global user.name $GIT_EMAIL
 
 # Configure emacs
 wget -O ~/.emacs https://gitlab.com/RobinWils/dotfiles/raw/master/.emacs
-cp -rf ~/.emacs /home/$USERNAME/.emacs
+ln -sf ~/.emacs /home/$USERNAME/.emacs
 
 # Create init script for startx
 wget -O ~/.xinitrc https://gitlab.com/RobinWils/dotfiles/raw/master/.xinitrc
-cp -rf ~/.xinitrc /home/$USERNAME/.xinitrc
+ln -sf ~/.xinitrc /home/$USERNAME/.xinitrc
 
 # RICE FIREFOX
 # The problem with this part is that the location does not exists until
@@ -160,13 +208,14 @@ chown -R $USERNAME /home/$USERNAME
 # It is not commented in that other script that I mentioned.
 
 # /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
+export GIO_EXTRA_MODULES="$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES"
+export GIT_SSL_CAINFO="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
 export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
+export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
+export LC_ALL=en_US.UTF-8
+export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
 export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
 export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
-export GIT_SSL_CAINFO="$SSL_CERT_FILE"
-export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
-export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
-export X_XFCE4_LIB_DIRS="$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS"
 export XDG_DATA_DIRS="$HOME/.guix-profile/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS"
-export GIO_EXTRA_MODULES="$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES"
+export X_XFCE4_LIB_DIRS="$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS"
 exit 0
