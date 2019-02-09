@@ -92,24 +92,25 @@ bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install
 # Start guix daemon
 /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
 # Setup guix
-su -c "guix package -i glibc-utf8-locales" -s /bin/sh $USERNAME
-export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
-export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
-export LC_ALL=en_US.UTF-8
-export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
-su -c "guix package -i nss-certs" -s /bin/sh $USERNAME
-export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
-export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
-su -c "guix refresh &&
+su -c 'guix package -i glibc-utf8-locales &&
+export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale &&
+export INFOPATH=$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH &&
+export LC_ALL=en_US.UTF-8 &&
+export PATH=$HOME/.guix-profile/bin:$PATH/.guix-profile/sbin${PATH:+:}$PATH &&
+guix package -i nss-certs &&
+export SSL_CERT_DIR=$HOME/.guix-profile/etc/ssl/certs
+export SSL_CERT_FILE=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
+guix refresh &&
 guix pull &&
-guix package -u" -s /bin/sh $USERNAME
+guix package -u' $USERNAME
 
 # Remove packages
 apt -y purge $PACKAGES_TO_REMOVE
 apt -y autoremove
 
 # Install packages as non-root user
-su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" -s /bin/sh $USERNAME
+su -c 'guix package -i 
+$ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES' $USERNAME
 
 # Create SysV startup for the guix-daemon
 /bin/cat <<EOM >/etc/init.d/guix-daemon
@@ -134,8 +135,10 @@ SCRIPTNAME=/etc/init.d/guix-daemon
 
 do_start()
 {
-        # /root/.guix-profile/bin/guix-daemon --build-users-group=guixbuild 2>/dev/null || return 2
-        /root/.guix-profile/bin/guix-daemon --build-users-group=guixbuild 2> /var/log/guix.log &
+        # /root/.guix-profile/bin/guix-daemon \
+        #--build-users-group=guixbuild 2>/dev/null || return 2
+        /root/.guix-profile/bin/guix-daemon \
+        --build-users-group=guixbuild 2> /var/log/guix.log &
 }
 
 case "$1" in
@@ -173,7 +176,7 @@ update-grub
 
 # Symlink the packages to root
 rm -rf ~/.guix-profile
-ln -sf /home/$USER/.guix-profile ~/.guix-profile
+ln -sf /home/$USERNAME/.guix-profile ~/.guix-profile
 
 # Configure git
 git config --global core.editor emacs
@@ -205,17 +208,20 @@ chown -R $USERNAME /home/$USERNAME
 # Your init system can do this but I didn't take the time to write that yet.
 
 # The first line is commented since we started the daemon already.
+# The other vars that are set are commented as well.
 # It is not commented in that other script that I mentioned.
 
 # /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
-export GIO_EXTRA_MODULES="$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES"
-export GIT_SSL_CAINFO="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
-export GUIX_LOCPATH="$HOME/.guix-profile/lib/locale"
-export INFOPATH="$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH"
-export LC_ALL=en_US.UTF-8
-export PATH="$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin${PATH:+:}$PATH"
-export SSL_CERT_DIR="$HOME/.guix-profile/etc/ssl/certs"
-export SSL_CERT_FILE="$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt"
-export XDG_DATA_DIRS="$HOME/.guix-profile/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS"
-export X_XFCE4_LIB_DIRS="$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS"
+su -c '
+export GIO_EXTRA_MODULES=$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES &&
+export GIT_SSL_CAINFO=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
+# export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale &&
+# export INFOPATH=$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH &&
+# export LC_ALL=en_US.UTF-8 &&
+# export PATH=$HOME/.guix-profile/bin:$PATH/.guix-profile/sbin${PATH:+:}$PATH &&
+# export SSL_CERT_DIR=$HOME/.guix-profile/etc/ssl/certs &&
+# export SSL_CERT_FILE=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
+export XDG_DATA_DIRS=$HOME/.guix-profile/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS &&
+export X_XFCE4_LIB_DIRS=$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS
+' $USERNAME
 exit 0
