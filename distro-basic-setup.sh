@@ -19,12 +19,12 @@
 # It also symlinks it to root so that they have the same packages.
 # I install XFCE4 just in case that I have problems with EXWM.
 # This has not happened yet.
-readonly GUIX_PACKAGES="acpi git icecat keepassxc libreoffice maim mplayer rsync 
+readonly GUIX_PACKAGES="acpi git icecat keepassxc libreoffice maim mplayer rsync \ 
 testdisk wicd xfce4-panel xfce4-session xrandr"
 
 # Default packages of the netinstaller which you don't want.
 # Apt will remove those packages.
-readonly PACKAGES_TO_REMOVE="bluetooth bluez laptop-detect popularity-contest 
+readonly PACKAGES_TO_REMOVE="bluetooth bluez laptop-detect popularity-contest \
 vim-common vim-tiny xxd"
 
 # The email address which you use for git
@@ -55,8 +55,8 @@ readonly GRUB_DISTRIBUTOR="GNU+Devuan+Guix"
 
 # X and Emacs might crash or give errors
 # if you remove one of these packages.
-readonly ESSENTIAL_GUIX_PACKAGES="emacs font-hack font-misc-misc 
-xf86-input-evdev xf86-input-keyboard xf86-input-mouse 
+readonly ESSENTIAL_GUIX_PACKAGES="emacs font-hack font-misc-misc \
+xf86-input-evdev xf86-input-keyboard xf86-input-mouse \
 xf86-input-synaptics xf86-video-nouveau xinit"
 # sct" the sct package does not work on guix for some reason
 # but it is essential for my init script
@@ -153,8 +153,7 @@ esac
 EOM
 
 # Install guix packages as non-root user
-su -c "guix package -i 
-$ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" $USERNAME
+su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" $USERNAME
 
 # Symlink the guix packages to root
 rm -rf ~/.guix-profile
