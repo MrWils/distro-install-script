@@ -62,6 +62,7 @@ xf86-input-synaptics xf86-video-nouveau xinit"
 # but it is essential for my init script
 readonly ESSENTIAL_APT_PACKAGES="ca-certificates curl dirmngr sct"
 
+
 # SCRIPT
 # ______
 
@@ -84,13 +85,14 @@ fi
 
 # Install required apt packages
 apt -y --no-install-recommends install $ESSENTIAL_APT_PACKAGES
+# Remove unneeded apt packages
+apt -y purge $PACKAGES_TO_REMOVE
+apt -y autoremove
 
-# Guix package manager
+# Install guix package manager
 gpg --keyserver pool.sks-keyservers.net \
     --recv-keys 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
 bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh)
-# Start guix daemon
-/gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
 # Setup guix
 su -c 'guix package -i glibc-utf8-locales &&
 export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale &&
@@ -103,16 +105,7 @@ export SSL_CERT_FILE=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
 guix refresh &&
 guix pull &&
 guix package -u' $USERNAME
-
-# Remove packages
-apt -y purge $PACKAGES_TO_REMOVE
-apt -y autoremove
-
-# Install packages as non-root user
-su -c 'guix package -i 
-$ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES' $USERNAME
-
-# Create SysV startup for the guix-daemon
+# Create SysV startup script for the guix-daemon
 /bin/cat <<EOM >/etc/init.d/guix-daemon
 #!/bin/sh
 ### BEGIN INIT INFO
@@ -128,9 +121,7 @@ $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES' $USERNAME
 ### END INIT INFO
 
 SCRIPTNAME=/etc/init.d/guix-daemon
-
 . /lib/lsb/init-functions
-
 [ -x /root/.guix-profile/bin/guix-daemon ] || exit 0
 
 do_start()
@@ -161,7 +152,15 @@ case "$1" in
 esac
 EOM
 
-# Hide grub
+# Install guix packages as non-root user
+su -c "guix package -i 
+$ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" $USERNAME
+
+# Symlink the guix packages to root
+rm -rf ~/.guix-profile
+ln -sf /home/$USERNAME/.guix-profile ~/.guix-profile
+
+# Update grub
 if [[ $HIDE_GRUB = true ]]; then
 /bin/cat <<EOM >/etc/default/grub
 GRUB_CMDLINE_LINUX=""
@@ -174,14 +173,11 @@ EOM
 fi
 update-grub
 
-# Symlink the packages to root
-rm -rf ~/.guix-profile
-ln -sf /home/$USERNAME/.guix-profile ~/.guix-profile
-
 # Configure git
 git config --global core.editor emacs
 git config --global user.email $GIT_EMAIL
 git config --global user.name $GIT_EMAIL
+ln -sf  ~/.gitconfig /home/$USERNAME/.gitconfig
 
 # Configure emacs
 wget -O ~/.emacs https://gitlab.com/RobinWils/dotfiles/raw/master/.emacs
@@ -205,13 +201,11 @@ chown -R $USERNAME /home/$USERNAME
 
 # Set the important vars for guix
 # I currently run a bash script with this after my system boots.
-# Your init system can do this but I didn't take the time to write that yet.
 
 # The first line is commented since we started the daemon already.
 # The other vars that are set are commented as well.
 # It is not commented in that other script that I mentioned.
 
-# /gnu/store/*-guix-*/bin/guix-daemon --build-users-group=guixbuild &
 su -c '
 export GIO_EXTRA_MODULES=$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES &&
 export GIT_SSL_CAINFO=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
