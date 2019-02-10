@@ -14,6 +14,9 @@
 # Packages to install,
 # the script uses guix to install these.
 
+# Guix-binary from https://alpha.gnu.org/gnu/guix/
+readonly GUIX_BINARY="guix-binary-0.16.0.x86_64-linux.tar.xz"
+
 # Different users can have different packages in guix.
 # This script installs all the packages for the non-root user.
 # It also symlinks it to root so that they have the same packages.
@@ -72,7 +75,7 @@ then echo "You need to be root to execute this script."
 fi
 
 # Prop WiFi driver
-if ![ -z "$PROP_WIFI" ]
+if ! [ -z "$PROP_WIFI" ]
 then
     mv /etc/apt/sources.list /etc/apt/sources.list.old
     touch /etc/apt/sources.list
@@ -92,20 +95,28 @@ apt -y autoremove
 # Install guix package manager
 gpg --keyserver pool.sks-keyservers.net \
     --recv-keys 3CE464558A84FDC69DB40CFB090B11993D9AEBB5
-bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh)
-# Setup guix
-su -c 'guix package -i glibc-utf8-locales &&
-export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale &&
-export INFOPATH=$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH &&
-export LC_ALL=en_US.UTF-8 &&
-export PATH=$HOME/.guix-profile/bin:$PATH/.guix-profile/sbin${PATH:+:}$PATH &&
-guix package -i nss-certs &&
-export SSL_CERT_DIR=$HOME/.guix-profile/etc/ssl/certs
-export SSL_CERT_FILE=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
-guix refresh &&
-guix pull &&
-guix package -u' $USERNAME
-# Create SysV startup script for the guix-daemon
+wget -O /tmp/guix-binary.tar.xz.sig https://alpha.gnu.org/gnu/guix/$GUIX_BINARY.sig 
+wget -O /tmp/guix-binary.tar.xz https://alpha.gnu.org/gnu/guix/$GUIX_BINARY
+gpg --verify /tmp/guix-binary.tar.xz.sig
+tar --warning=no-timestamp -xf \
+     /tmp/guix-binary.tar.xz -C /tmp &&
+cp -r /tmp/var/guix /var/ && cp -r /tmp/gnu /
+# Make the guix profile available
+mkdir -p ~root/.config/guix
+ln -sf /var/guix/profiles/per-user/root/current-guix \
+~root/.config/guix/current
+GUIX_PROFILE="`echo ~root`/.config/guix/current" ; \
+source $GUIX_PROFILE/etc/profile
+# Create the group and user accounts for build users
+groupadd --system guixbuild
+for i in `seq -w 1 10`;
+  do
+    useradd -g guixbuild -G guixbuild           \
+            -d /var/empty -s `which nologin`    \
+            -c "Guix build user $i" --system    \
+            guixbuilder$i;
+  done
+# Create SysV script for the guix-daemon
 /bin/cat <<EOM >/etc/init.d/guix-daemon
 #!/bin/sh
 ### BEGIN INIT INFO
@@ -151,6 +162,23 @@ case "$1" in
         ;;
 esac
 EOM
+chmod +x /etc/init.d/guix-daemon
+/etc/init.d/guix-daemon start
+# Make sure that other users can use the guix command
+mkdir -p /usr/local/bin
+ln -s /var/guix/profiles/per-user/root/current-guix/bin/guix
+# Setup guix
+su -c 'guix package -i glibc-utf8-locales &&
+export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale &&
+export INFOPATH=$HOME/.guix-profile/share/info${INFOPATH:+:}$INFOPATH &&
+export LC_ALL=en_US.UTF-8 &&
+export PATH=$HOME/.guix-profile/bin:$PATH/.guix-profile/sbin${PATH:+:}$PATH &&
+guix package -i nss-certs &&
+export SSL_CERT_DIR=$HOME/.guix-profile/etc/ssl/certs
+export SSL_CERT_FILE=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
+guix refresh &&
+guix pull &&
+guix package -u' $USERNAME
 
 # Install guix packages as non-root user
 su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" $USERNAME
