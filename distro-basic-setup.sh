@@ -18,9 +18,6 @@
 # ______
 
 
-# Guix-binary from https://alpha.gnu.org/gnu/guix
-readonly GUIX_BINARY="guix-binary-0.16.0.x86_64-linux.tar.xz"
-
 # Packages to install
 readonly GUIX_PACKAGES="acpi git icecat keepassxc libreoffice maim mplayer \
 rsync testdisk wicd xfce4-panel xfce4-session xrandr"
@@ -120,10 +117,6 @@ gpg --keyserver pool.sks-keyservers.net \
 bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh)
 
 
-# THIS DAEMON DOES NOT WORK
-# RUN IT MANUALLY
-# ~root/.config/guix/current/bin/guix-daemon \
-#       --build-users-group=guixbuild &
 echo "Creating SysV script for the guix-daemon..."
 /bin/cat <<EOM >/etc/init.d/guix-daemon
 #!/bin/sh
@@ -175,6 +168,13 @@ update-rc.d guix-daemon defaults
 chmod a+x /etc/init.d/guix-daemon
 /etc/init.d/guix-daemon start
 
+
+# THE SYSV DAEMON DOES NOT WORK
+# SO WE RUN IT MANUALLY
+ ~root/.config/guix/current/bin/guix-daemon \
+       --build-users-group=guixbuild 2> /dev/null &
+
+
 echo "Make a guix profile for our user..."
 mkdir /var/guix/profiles/per-user/rmw
 chown rmw /var/guix/profiles/per-user/rmw
@@ -194,8 +194,8 @@ echo -e "---------------------\n"
 
 
 echo "Installing the guix packages..."
-su -c "guix package -i $ESSENTIAL_GUIX_PACKAGES \ 
-$GUIX_PACKAGES" \
+su -c "guix package \
+-i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" \
    $USERNAME &> /dev/null
 
 
@@ -273,5 +273,5 @@ chown -R $USERNAME /home/$USERNAME
 # export XDG_DATA_DIRS=$HOME/.guix-profile/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS &&
 # export X_XFCE4_LIB_DIRS=$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS
 # ' $USERNAME
-echo -e "/nInstallation finished!/nEnjoy your new system!/n"
+echo -e "\nInstallation finished!\nEnjoy your new system!\n"
 exit 0
