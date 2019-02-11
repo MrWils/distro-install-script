@@ -255,23 +255,12 @@ echo "Making sure that the user owns his home..."
 chown -R $USERNAME /home/$USERNAME
 
 
-#TODO: figure out of we need this
-# echo "Setting the important vars for guix..."
+echo "Setting the important paths for guix..."
+su -c "guix package --search-paths >> ~/.bashrc" \ 
+   $USERNAME &> /dev/null
 
-# I currently run a bash script with this after my system boots..
-# The vars that are set are commented.
-# It is not commented in that other script that I mentioned.
 
-# su -c '
-# export PATH=$HOME/.guix-profile/bin:$PATH/.guix-profile/sbin${PATH:+:}$PATH &&
-# export GIO_EXTRA_MODULES=$HOME/.guix-profile/lib/gio/modules${GIO_EXTRA_MODULES:+:}$GIO_EXTRA_MODULES &&
-# export GIT_SSL_CAINFO=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
-# # export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale &&
-# # export LC_ALL=en_US.UTF-8 &&
-# # export SSL_CERT_DIR=$HOME/.guix-profile/etc/ssl/certs &&
-# # export SSL_CERT_FILE=$HOME/.guix-profile/etc/ssl/certs/ca-certificates.crt &&
-# export XDG_DATA_DIRS=$HOME/.guix-profile/share${XDG_DATA_DIRS:+:}$XDG_DATA_DIRS &&
-# export X_XFCE4_LIB_DIRS=$HOME/.guix-profile/lib/xfce4${X_XFCE4_LIB_DIRS:+:}$X_XFCE4_LIB_DIRS
-# ' $USERNAME
-echo -e "\nInstallation finished!\nEnjoy your new system!\n"
+echo -e "\nInstallation finished!"
+echo "Enjoy your new system!"
+echo -e "Make sure to add new guix paths to your .bashrc file.\n"
 exit 0
