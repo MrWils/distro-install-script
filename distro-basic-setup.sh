@@ -59,7 +59,7 @@ xf86-input-synaptics xf86-video-nouveau xinit"
 # sct" the sct package does not work on guix for some reason
 # but it is essential for my init script
 readonly ESSENTIAL_APT_PACKAGES="ca-certificates curl dirmngr nscd sct"
-
+readonly RECOMMENDED_APT_PACKAGES="pm-utils"
 
 # SCRIPT
 # ______
@@ -89,9 +89,9 @@ then
 fi
 
 
-echo "Installing essential apt packages..."
+echo "Installing apt packages..."
 apt-get -y --no-install-recommends \
-        install $ESSENTIAL_APT_PACKAGES > /dev/null
+        install $ESSENTIAL_APT_PACKAGES $RECOMMENDED_APT_PACKAGES > /dev/null
 
 
 echo "Removing unneeded apt packages..."
