@@ -252,7 +252,7 @@ wget -O /etc/hosts \
 
 
 echo "Setting the important paths for guix..."
-su -c 'echo "export PATH=\$PATH:$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin"  >> ~/.bashrc &&
+su -c 'echo "export PATH=\$PATH:$HOME/.guix-profile/bin:$HOME/.guix-profile/sbin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"  >> ~/.bashrc &&
    guix package --search-paths | tail +2 >> ~/.bashrc' $USERNAME &> /dev/null
 cp /home/$USERNAME/.bashrc ~/.bashrc
 
