@@ -6,9 +6,8 @@
 
 # Different users can have different packages in guix.
 # This script installs all the packages for the non-root user.
-# It also symlinks it to root so that they have the same packages.
-# I install XFCE4 just in case that I have problems with EXWM.
-# This has not happened yet.
+# It also adds the same guix-profile to the root's .bashrc,
+# so that they have the same packages.
 
 # RUN THIS AT YOUR OWN RISK.
 # THIS SCRIPT HAS NOT BEEN TESTED YET.
@@ -18,57 +17,75 @@
 # ______
 
 
-# Packages to install
-readonly GUIX_PACKAGES="acpi git icecat keepassxc libreoffice maim mplayer \
-rsync testdisk wicd xfce4-panel xfce4-session xrandr"
-
-# Apt will remove these packages
-readonly PACKAGES_TO_REMOVE="bluetooth bluez laptop-detect popularity-contest \
-vim-common vim-tiny xxd"
-
-# The email address which you use for git,
-# I am lazy so I use a grep but you can use a regular email here.
-readonly GIT_EMAIL=$(wget -qO- https://gitlab.com/RobinWils \
-                            | grep -o '[[:alnum:]+\.\_\-]*@[[:alnum:]+\.\_\-]*' \
-                            | tail -1)
-
 # The username of your non-root user
 readonly USERNAME="rmw"
 
-# The prop wifi debian package,
-# leave this empty if you don't need a prop WiFi driver
-readonly PROP_WIFI="firmware-iwlwifi"
 
+# REPOSITORIES
 # The Debian repo for the prop WiFi drivers
 readonly DEBIAN_REPO="deb http://http.us.debian.org/debian/ 
 testing non-free contrib main"
 
+# The propetiary wifi debian package,
+# leave this empty if you don't need a prop WiFi driver
+readonly PROP_WIFI="firmware-iwlwifi"
+
+# The repo to use after the installation
+readonly REPO="deb https://repo.pureos.net/pureos green main"
+# Repository key
+readonly REPO_KEYRING="pureos-archive-keyring"
+
 # Custom host file (which blocks ads) 
 readonly HOSTS="https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
 
+# The email address which you use for git,
+# I am lazy/clever so I use a grep but you can use a regular email address
+readonly GIT_EMAIL=$(wget -qO- https://gitlab.com/RobinWils \
+                         | grep -o '[[:alnum:]+\.\_\-]*@[[:alnum:]+\.\_\-]*' \
+                         | tail -1)
+
+
+# GRUB
 # Hide grub
 readonly HIDE_GRUB=true
 # Name in grub menu
 readonly GRUB_DISTRIBUTOR="GNU+Devuan+Guix"
 
-# X and Emacs might crash or give errors
-# if you remove one of these packages
-readonly ESSENTIAL_GUIX_PACKAGES="emacs nss-certs font-hack \
-font-misc-misc xf86-input-evdev xf86-input-keyboard xf86-input-mouse \
-xf86-input-synaptics xf86-video-nouveau xinit"
-# sct" the sct package does not work on guix for some reason
-# but it is essential for my init script
-readonly ESSENTIAL_APT_PACKAGES="ca-certificates curl dirmngr nscd sct"
-readonly RECOMMENDED_APT_PACKAGES="pm-utils"
+
+# APT
+# Apt will remove these packages
+readonly APT_PACKAGES_TO_REMOVE="bluetooth bluez laptop-detect popularity-contest \
+vim-common vim-tiny xxd"
+# Packages that we need so that the installer runs
+readonly REQUIRED_APT_PACKAGES="apt-transport-https ca-certificates \
+curl dirmngr wget"
+# Other apt packages, most of these are required so that EXWM/Xorg works
+readonly APT_PACKAGES="sct xserver-xorg xserver-xorg-input-evdev \
+xserver-xorg-input-kbd xserver-xorg-input-mouse \
+xserver-xorg-input-synaptics pm-utils"
+# Video driver for xorg (apt)
+readonly VIDEO_DRIVER_FOR_X="xserver-xorg-video-nouveau"
+
+
+# GUIX
+# Packages to install
+readonly GUIX_PACKAGES="acpi alsa-utils emacs git nss-certs firefox font-hack \
+keepassxc libreoffice maim mplayer rsync testdisk wicd xrandr"
+# xfce4-panel xfce4-session
+# font-misc-misc xf86-input-evdev xf86-input-keyboard xf86-input-mouse
+# xf86-input-synaptics xf86-video-nouveau xinit xorg-server sct"
+
 
 # SCRIPT
 # ______
-
 
 if [ "$EUID" -ne 0 ]
 then echo "You need to be root to execute this script."
      exit 1
 fi
+
+# Do not show dialogs during the install
+export DEBIAN_FRONTEND=noninteractive
 
 
 echo -e "\nPreparing the install"
@@ -77,26 +94,45 @@ echo -e "---------------------\n"
 
 if ! [ -z "$PROP_WIFI" ]
 then
-    echo "Installing prop WiFi driver..."
+    echo "Installing propetiary WiFi driver..."
     mv /etc/apt/sources.list /etc/apt/sources.list.old
     touch /etc/apt/sources.list
     echo $DEBIAN_REPO >> /etc/apt/sources.list
     apt-get update > /dev/null
-    apt-get -y --no-install-recommends \
+    apt-get -yqq --no-install-recommends \
             install $PROP_WIFI > /dev/null
-    mv /etc/apt/sources.list.old /etc/apt/sources.list
-    apt-get update > /dev/null
 fi
 
 
-echo "Installing apt packages..."
-apt-get -y --no-install-recommends \
-        install $ESSENTIAL_APT_PACKAGES $RECOMMENDED_APT_PACKAGES > /dev/null
-
-
 echo "Removing unneeded apt packages..."
-apt-get -y purge $PACKAGES_TO_REMOVE > /dev/null
-apt-get -y autoremove --purge > /dev/null
+apt-get -yqq purge $APT_PACKAGES_TO_REMOVE > /dev/null
+apt-get -yqq autoremove --purge > /dev/null
+
+
+echo "Install packages which are required for the install..."
+apt-get -yqq --no-install-recommends install $REQUIRED_APT_PACKAGES &> /dev/null
+
+
+echo "Switching repositories..."
+rm -rf /etc/apt/sources.list
+touch /etc/apt/sources.list
+echo $REPO >> /etc/apt/sources.list
+
+
+echo "Installing the keyring..."
+apt-get -yqq update --allow-insecure-repositories &> /dev/null 
+apt-get -yqq install $REPO_KEYRING --allow-unauthenticated &> /dev/null
+
+
+echo "Updating system..."
+apt-get update &> /dev/null
+apt-get -yqq dist-upgrade &> /dev/null
+apT-get -yqq upgrade &> /dev/null
+
+
+echo "Installing apt packages..."
+apt-get -yqq --no-install-recommends \
+        install $APT_PACKAGES $VIDEO_DRIVER_FOR_X &> /dev/null
 
 
 echo -e "\nPreparing guix"
@@ -112,8 +148,7 @@ fi
 
 echo "Installing the guix package manager..."
 gpg --keyserver pool.sks-keyservers.net \
-    --recv-keys 3CE464558A84FDC69DB40CFB090B11993D9AEBB5 \
-&> /dev/null
+    --recv-keys 3CE464558A84FDC69DB40CFB090B11993D9AEBB5 &> /dev/null
 bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install.sh)
 
 
@@ -163,6 +198,7 @@ case "$1" in
 esac
 EOM
 
+
 echo "Starting the guix-daemon..."
 update-rc.d guix-daemon defaults
 chmod a+x /etc/init.d/guix-daemon
@@ -170,51 +206,70 @@ chmod a+x /etc/init.d/guix-daemon
 
 
 # THE SYSV DAEMON DOES NOT WORK
-# SO WE RUN IT MANUALLY
- ~root/.config/guix/current/bin/guix-daemon \
-       --build-users-group=guixbuild 2> /dev/null &
+# SO WE CREATE A SCRIPT AND RUN THAT
+/bin/cat <<EOM >~/run-guix-daemon.sh
+#!/bin/sh
+~root/.config/guix/current/bin/guix-daemon --build-users-group=guixbuild &> /dev/null &
+EOM
+chmod +x ~/run-guix-daemon.sh
+sh ~/run-guix-daemon.sh
 
 
 echo "Make a guix profile for our user..."
 mkdir /var/guix/profiles/per-user/rmw
 chown rmw /var/guix/profiles/per-user/rmw
 
-echo -e "\nUpdating guix (guix pull)..."
-su -c "guix pull" \
-   $USERNAME &> /dev/null
-
-echo "Configuring the locales...."
-su  -c 'guix package -i glibc-utf8-locales &&
-export LC_ALL=en_US.UTF-8 ' \
-    $USERNAME &> /dev/null
-
 
 echo -e "\nInstall guix packages"
 echo -e "---------------------\n"
 
 
+echo "Adding the important paths for guix to bashrc..."
+su -c 'echo "# Regular system paths" >> ~/.bashrc &&
+echo "export PATH=\$PATH:/usr/local/bin:usr/local/sbin:/usr/sbin:/sbin" >> ~/.bashrc && 
+echo "# Guix paths" >> ~/.bashrc && 
+echo "export PATH=\$PATH:$HOME/.config/guix/current/bin"  >> ~/.bashrc &&
+echo "export GUIX_PROFILE=$HOME/.guix-profile"  >> ~/.bashrc &&
+echo "source \$GUIX_PROFILE/etc/profile" >> ~/.bashrc &&
+echo "# Guix locales" >> ~/.bashrc &&
+echo "export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale" >> ~/.bashrc' $USERNAME &> /dev/null
+
+cp /home/$USERNAME/.bashrc ~/.bashrc
+source ~/.bashrc
+su -c 'source ~/.bashrc' $USERNAME
+
+
+echo -e "\nUpdating guix (guix pull)..."
+guix pull &> /dev/null
+
+
+echo "Configuring the locales...."
+guix package -i glibc-utf8-locales &> /dev/null
+source ~/.bashrc
+su -c 'source ~/.bashrc' $USERNAME
+
 echo "Installing the guix packages..."
-su -c "guix package \
--i $ESSENTIAL_GUIX_PACKAGES $GUIX_PACKAGES" \
-   $USERNAME &> /dev/null
+guix package -i $GUIX_PACKAGES #&> /dev/null
 
 
 echo -e "\nConfigure packages"
 echo -e "------------------\n"
 
 
+if [[ $HIDE_GRUB = true ]];
+then
 echo "Updating grub..."
-if [[ $HIDE_GRUB = true ]]; then
-    /bin/cat <<EOM >/etc/default/grub
-GRUB_CMDLINE_LINUX=""
-GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+/bin/cat <<EOM >/etc/default/grub
 GRUB_DEFAULT=0
-GRUB_DISTRIBUTOR="$GRUB_DISTRIBUTOR"
 GRUB_HIDDEN_TIMEOUT=0
 GRUB_HIDDEN_TIMEOUT_QUIET=true
+GRUB_TIMEOUT=0
+GRUB_DISTRIBUTOR="$GRUB_DISTRIBUTOR"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet"
+GRUB_CMDLINE_LINUX=""
 EOM
+update-grub > /dev/null 
 fi
-update-grub
 
 
 echo "Configuring git..."
@@ -246,16 +301,7 @@ cp -rf  ~/.xinitrc /home/$USERNAME/.xinitrc
 
 
 echo "Replacing the default host file..."
-wget -O /etc/hosts \
-     $HOSTS -q \
-     > /dev/null
-
-
-echo "Setting the important paths for guix..."
-su -c 'echo "export PATH=\$PATH:$HOME/.config/guix/current/bin"  >> ~/.bashrc &&
-echo "export GUIX_PROFILE=$HOME/.guix-profile"  >> ~/.bashrc &&
-echo "source \$GUIX_PROFILE/etc/profile" >> ~/.bashrc' $USERNAME &> /dev/null
-cp /home/$USERNAME/.bashrc ~/.bashrc
+wget -O /etc/hosts $HOSTS -q > /dev/null
 
 
 echo "Making sure that the users owns their home..."
@@ -263,7 +309,6 @@ chown -R $USERNAME /home/$USERNAME
 chown -R root /root
 
 
-echo -e "\nInstallation finished!"
-echo "Enjoy your new system!"
-echo -e "Make sure to add new guix paths to your .bashrc file.\n"
+echo -e "\n\nInstallation finished!"
+echo "Enjoy your new system!\n"
 exit 0
