@@ -31,6 +31,8 @@ testing non-free contrib main"
 readonly PROP_WIFI="firmware-iwlwifi"
 
 # The repo to use after the installation
+# TODO: find a better FSF repo, systemd breaks stuff
+# Repositories without systemd are recommended.
 readonly REPO="deb https://repo.pureos.net/pureos green main"
 # Repository key
 readonly REPO_KEYRING="pureos-archive-keyring"
@@ -69,7 +71,7 @@ readonly VIDEO_DRIVER_FOR_X="xserver-xorg-video-nouveau"
 
 # GUIX
 # Packages to install
-readonly GUIX_PACKAGES="acpi alsa-utils emacs git nss-certs firefox font-hack \
+readonly GUIX_PACKAGES="acpi alsa-utils emacs git nss-certs icecat font-hack \
 keepassxc libreoffice maim mplayer rsync testdisk wicd xrandr"
 # xfce4-panel xfce4-session
 # font-misc-misc xf86-input-evdev xf86-input-keyboard xf86-input-mouse
@@ -87,7 +89,6 @@ fi
 # Do not show dialogs during the install
 export DEBIAN_FRONTEND=noninteractive
 
-
 echo -e "\nPreparing the install"
 echo -e "---------------------\n"
 
@@ -100,13 +101,13 @@ then
     echo $DEBIAN_REPO >> /etc/apt/sources.list
     apt-get update > /dev/null
     apt-get -yqq --no-install-recommends \
-            install $PROP_WIFI > /dev/null
+            install $PROP_WIFI &> /dev/null
 fi
 
 
 echo "Removing unneeded apt packages..."
-apt-get -yqq purge $APT_PACKAGES_TO_REMOVE > /dev/null
-apt-get -yqq autoremove --purge > /dev/null
+apt-get -yqq purge $APT_PACKAGES_TO_REMOVE &> /dev/null
+apt-get -yqq autoremove --purge &> /dev/null
 
 
 echo "Install packages which are required for the install..."
@@ -127,7 +128,7 @@ apt-get -yqq install $REPO_KEYRING --allow-unauthenticated &> /dev/null
 echo "Updating system..."
 apt-get update &> /dev/null
 apt-get -yqq dist-upgrade &> /dev/null
-apT-get -yqq upgrade &> /dev/null
+apt-get -yqq upgrade &> /dev/null
 
 
 echo "Installing apt packages..."
@@ -154,7 +155,7 @@ bash <(curl -s https://git.savannah.gnu.org/cgit/guix.git/plain/etc/guix-install
 
 echo "Creating SysV script for the guix-daemon..."
 /bin/cat <<EOM >/etc/init.d/guix-daemon
-#!/bin/sh
+#!/bin/bash
 ### BEGIN INIT INFO
 # Provides:          guix-daemon
 # Required-Start:    mountdevsubfs
@@ -200,15 +201,15 @@ EOM
 
 
 echo "Starting the guix-daemon..."
-update-rc.d guix-daemon defaults
-chmod a+x /etc/init.d/guix-daemon
-/etc/init.d/guix-daemon start
+# update-rc.d guix-daemon defaults
+# chmod a+x /etc/init.d/guix-daemon
+# /etc/init.d/guix-daemon start
 
 
 # THE SYSV DAEMON DOES NOT WORK
 # SO WE CREATE A SCRIPT AND RUN THAT
 /bin/cat <<EOM >~/run-guix-daemon.sh
-#!/bin/sh
+#!/bin/bash
 ~root/.config/guix/current/bin/guix-daemon --build-users-group=guixbuild &> /dev/null &
 EOM
 chmod +x ~/run-guix-daemon.sh
@@ -236,20 +237,20 @@ echo "export GUIX_LOCPATH=$HOME/.guix-profile/lib/locale" >> ~/.bashrc' $USERNAM
 
 cp /home/$USERNAME/.bashrc ~/.bashrc
 source ~/.bashrc
-su -c 'source ~/.bashrc' $USERNAME
 
 
 echo -e "\nUpdating guix (guix pull)..."
+echo "Be patient, this takes a while"
 guix pull &> /dev/null
 
 
 echo "Configuring the locales...."
-guix package -i glibc-utf8-locales &> /dev/null
+su -c "guix package -i glibc-utf8-locales" $USERNAME &> /dev/null
 source ~/.bashrc
-su -c 'source ~/.bashrc' $USERNAME
 
 echo "Installing the guix packages..."
-guix package -i $GUIX_PACKAGES #&> /dev/null
+echo "Be patient, icecat takes a while to install"
+su -c "guix package -i $GUIX_PACKAGES" $USERNAME &> /dev/null
 
 
 echo -e "\nConfigure packages"
@@ -268,7 +269,7 @@ GRUB_DISTRIBUTOR="$GRUB_DISTRIBUTOR"
 GRUB_CMDLINE_LINUX_DEFAULT="quiet"
 GRUB_CMDLINE_LINUX=""
 EOM
-update-grub > /dev/null 
+update-grub &> /dev/null
 fi
 
 
@@ -282,14 +283,14 @@ cp -rf  ~/.gitconfig /home/$USERNAME/.gitconfig
 echo "Configuring emacs..."
 wget \
     -O ~/.emacs https://gitlab.com/RobinWils/dotfiles/raw/master/.emacs \
-    -q > /dev/null
+    -q &> /dev/null
 cp -rf ~/.emacs /home/$USERNAME/.emacs
 
 
 echo "Creating init script for startx..."
 wget \
     -O ~/.xinitrc https://gitlab.com/RobinWils/dotfiles/raw/master/.xinitrc \
-    -q > /dev/null
+    -q &> /dev/null
 cp -rf  ~/.xinitrc /home/$USERNAME/.xinitrc
 
 
@@ -301,14 +302,14 @@ cp -rf  ~/.xinitrc /home/$USERNAME/.xinitrc
 
 
 echo "Replacing the default host file..."
-wget -O /etc/hosts $HOSTS -q > /dev/null
+wget -O /etc/hosts $HOSTS -q &> /dev/null
 
 
-echo "Making sure that the users owns their home..."
+echo "Making sure that the users own their home..."
 chown -R $USERNAME /home/$USERNAME
 chown -R root /root
 
 
 echo -e "\n\nInstallation finished!"
-echo "Enjoy your new system!\n"
+echo -e "Enjoy your new system!\n"
 exit 0
