@@ -29,7 +29,7 @@ readonly VBOX_PACKAGE="virtualbox-6.0"
 readonly APT_PACKAGES_TO_REMOVE="bluetooth bluez mousepad xfce4-goodies laptop-detect popularity-contest \
 vim-common vim-tiny xxd xfce4-terminal xfce4-notes xfce4-notes-plugin vlc ristretto xsane xarchiver"
 # Apt will install these packages
-readonly APT_PACKAGES="acpi sct emacs maim mplayer rsync keepass2 fonts-hack-ttf qmmp blackbird-gtk-theme \
+readonly APT_PACKAGES="acpi sct emacs25 maim mplayer rsync keepass2 fonts-hack-ttf qmmp blackbird-gtk-theme \
 moka-icon-theme"
 
 
@@ -70,9 +70,13 @@ cp -rf  ~/.gitconfig /home/$USERNAME/.gitconfig
 
 echo "Configuring emacs..."
 wget \
-    -O ~/.emacs https://gitlab.com/RobinWils/dotfiles/raw/master/.emacs \
+    -O ~/.emacs https://gitlab.com/RobinWils/dotfiles/raw/master/emacs/.emacs \
     -q &> /dev/null
 cp -rf ~/.emacs /home/$USERNAME/.emacs
+get \
+    -O ~/.emacs.d/emacs-init.org https://gitlab.com/RobinWils/dotfiles/raw/master/emacs/emacs-init.org
+    q &> /dev/null
+cp -rf ~/.emacs.d/emacs-init.org /home/$USERNAME/.emacs.d/emacs-init.org
 
 if [[ $HIDE_GRUB = true ]];
 then
