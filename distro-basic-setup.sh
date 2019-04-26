@@ -105,6 +105,8 @@ fi
 
 echo "Replacing the default host file..."
 wget -O /etc/hosts $HOSTS -q &> /dev/null
+# Add hostname to hosts file since some programs depend on this line.
+sed -i "/^127.0.0.1\\ localhost.localdomain/i 127.0.0.1\\ $HOSTNAME" /etc/hosts
 
 # TODO: XFCE configuration
 # /home/rmw/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings
