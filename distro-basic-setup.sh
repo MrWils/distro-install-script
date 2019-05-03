@@ -30,7 +30,7 @@ readonly APT_PACKAGES_TO_REMOVE="bluetooth bluez mousepad xfce4-goodies laptop-d
 vim-common vim-tiny xxd xfce4-terminal xfce4-notes xfce4-notes-plugin vlc ristretto xsane xarchiver"
 # Apt will install these packages
 readonly APT_PACKAGES="acpi sct emacs25 maim mplayer rsync keepass2 fonts-hack-ttf qmmp blackbird-gtk-theme \
-moka-icon-theme"
+moka-icon-theme htop"
 
 
 # SCRIPT
