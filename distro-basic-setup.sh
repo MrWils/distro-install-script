@@ -15,8 +15,11 @@ readonly GIT_EMAIL=$(wget -qO- https://gitlab.com/RobinWils \
                          | grep -o '[[:alnum:]+\.\_\-]*@[[:alnum:]+\.\_\-]*' \
                          | tail -1)
 
+# Keybindings
+# Replacing caps with ctrl,
+# keep this empty if you don't want any new Keybindings
+readonly XKBOPTIONS="ctrl:nocaps"
 # GRUB
-# Hide grub
 readonly HIDE_GRUB=true
 # Name in grub menu
 readonly GRUB_DISTRIBUTOR="Devuan"
@@ -92,6 +95,10 @@ GRUB_CMDLINE_LINUX=""
 EOM
 update-grub &> /dev/null
 fi
+
+[ -z "$XKBOPTIONS" ] || (echo "Configuring keybindings..." \
+&& sed -i "/XKBOPTIONS/c\XKBOPTIONS=\"$XKBOPTIONS\"" \
+/etc/default/keyboard)
 
 if [[ $INSTALL_VBOX = true ]];
 then
