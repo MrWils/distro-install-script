@@ -30,7 +30,7 @@ readonly VBOX_PACKAGE="virtualbox-6.0"
 # APT
 # Apt will remove these packages
 readonly APT_PACKAGES_TO_REMOVE="bluetooth bluez mousepad xfce4-goodies laptop-detect popularity-contest \
-vim-common vim-tiny xxd xfce4-terminal xfce4-notes xfce4-notes-plugin vlc ristretto xsane xarchiver"
+vim-common vim-tiny xxd xfce4-terminal xfce4-notes xfce4-notes-plugin vlc ristretto xsane xarchiver quodlibet"
 # Apt will install these packages
 readonly APT_PACKAGES="acpi sct emacs25 maim mplayer rsync keepass2 fonts-hack-ttf qmmp blackbird-gtk-theme \
 moka-icon-theme htop"
