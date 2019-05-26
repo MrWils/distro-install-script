@@ -43,7 +43,7 @@ xfce4-notes xfce4-notes-plugin vlc ristretto xsane xarchiver quodlibet
 evince"
 # Apt will install these packages
 readonly APT_PACKAGES="acpi sct emacs25 maim mplayer rsync fonts-hack-ttf qmmp 
-blackbird-gtk-theme moka-icon-theme htop zip kdenlive git"
+blackbird-gtk-theme moka-icon-theme htop zip kdenlive git slop baobab"
 
 
 # SCRIPT
