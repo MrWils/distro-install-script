@@ -82,7 +82,7 @@ then
     tar -xvf /tmp/rider.tar.gz -C /opt/ && mv /opt/*Rider* /opt/rider &> /dev/null
     ln -sf /opt/rider/bin/rider.sh /usr/local/bin/rider
     rm -rf /tmp/rider.tar.gz
-    echo "Installing dotnet-core and maven..."
+    echo "Installing dotnet-core, mono-complete and maven..."
     apt-get -yqq \
             --no-install-recommends install apt-transport-https dirmngr \
             gnupg ca-certificates maven &> /dev/null
@@ -90,8 +90,14 @@ then
             --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF &> /dev/null
     echo "deb https://download.mono-project.com/repo/debian stable-stretch main" \
         | tee /etc/apt/sources.list.d/mono-official-stable.list &> /dev/null
+    wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.asc.gpg
+    mv microsoft.asc.gpg /etc/apt/trusted.gpg.d/
+    wget -q https://packages.microsoft.com/config/debian/9/prod.list
+    mv prod.list /etc/apt/sources.list.d/microsoft-prod.list
+    chown root:root /etc/apt/trusted.gpg.d/microsoft.asc.gpg
+    chown root:root /etc/apt/sources.list.d/microsoft-prod.list
     apt-get update &> /dev/null
-    apt-get -yqq --no-install-recommends install mono-complete &> /dev/null
+    apt-get -yqq --no-install-recommends install mono-complete dotnet-sdk-2.2 &> /dev/null
 fi
 
 if [[ $INSTALL_KEEPASSXC = true ]];
