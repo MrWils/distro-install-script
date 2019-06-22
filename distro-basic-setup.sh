@@ -29,11 +29,15 @@ readonly VBOX_PACKAGE="virtualbox-6.0"
 # Install Jetbrains (intellij and rider)
 # I need this for college
 readonly INSTALL_JETBRAINS=true
-readonly INTELLIJ_TAR="https://download.jetbrains.com/idea/ideaIU-2019.1.2.tar.gz"
-readonly RIDER_TAR="https://download.jetbrains.com/rider/JetBrains.Rider-2019.1.1.tar.gz"
+# Use'U' for Ultimate or 'C' for Community 
+readonly INTELLIJ_VERSION='U'
+
 # Install keepassxc
 readonly INSTALL_KEEPASSXC=true
 readonly KEEPASSXC_DEB="https://github.com/magkopian/keepassxc-debian/releases/download/2.3.4-1/keepassxc_2.3.4-1_amd64_stable_stretch.deb"
+# Install GNU icecat
+readonly INSTALL_GNU_ICECAT=true
+readonly GNU_ICECAT_TAR=https://ftp.gnu.org/gnu/gnuzilla/60.7.0/icecat-60.7.0.en-US.gnulinux-x86_64.tar.bz2
 
 # APT
 # Apt will remove these packages
@@ -73,15 +77,25 @@ apt-get -yqq upgrade &> /dev/null
 if [[ $INSTALL_JETBRAINS = true ]];
 then
     echo "Installing Jetbrains IDE's..."
+    echo "Fetching the most recent tar URLs..."
+    LATEST_VERSION=$(wget "https://www.jetbrains.com/intellij-repository/releases" -qO- grep -P -o -m 1 "(?<=https://www.jetbrains.com/intellij-repository/releases/com/jetbrains/intellij/idea/BUILD/)[^/]+(?=/)")
+    INTELLIJ_TAR="https://download.jetbrains.com/idea/ideaI$INTELLIJ_VERSION-$LATEST_VERSION.tar.gz"
+
+    LATEST_VERSION=$(wget "https://www.jetbrains.com/intellij-repository/releases" -qO- grep -P -o -m 1 "(?<=https://www.jetbrains.com/intellij-repository/releases/com/jetbrains/intellij/rider/BUILD/)[^/]+(?=/)")
+    RIDER_TAR="https://download.jetbrains.com/rider/JetBrains.Rider-$LATEST_VERSION.tar.gz"
+
+    echo "Installing intellij..." 
     wget -O /tmp/idea.tar.gz $INTELLIJ_TAR &> /dev/null
     tar -xvf /tmp/idea.tar.gz -C /opt/ && mv /opt/*idea* /opt/idea &> /dev/null
     ln -sf /opt/idea/bin/idea.sh /usr/local/bin/idea
     rm -rf /tmp/idea.tar.gz
     
+    echo "Installing rider..."
     wget -O /tmp/rider.tar.gz $RIDER_TAR &> /dev/null
     tar -xvf /tmp/rider.tar.gz -C /opt/ && mv /opt/*Rider* /opt/rider &> /dev/null
     ln -sf /opt/rider/bin/rider.sh /usr/local/bin/rider
     rm -rf /tmp/rider.tar.gz
+
     echo "Installing dotnet-core, mono-complete and maven..."
     apt-get -yqq \
             --no-install-recommends install apt-transport-https dirmngr \
@@ -102,10 +116,10 @@ fi
 
 if [[ $INSTALL_KEEPASSXC = true ]];
 then
-   wget -O /tmp/keepassxc.deb $KEEPASSXC_DEB &> /dev/null
-   dpkg -i /tmp/keepassxc.deb &> /dev/null
-   apt-get -yqq --fix-broken-install install &> /dev/null
     echo "Installing keepassxc..."
+    wget -O /tmp/keepassxc.deb $KEEPASSXC_DEB &> /dev/null
+    dpkg -i /tmp/keepassxc.deb &> /dev/null
+    apt-get -yqq --fix-broken-install install &> /dev/null
 fi    
 
 echo "Configuring git..."
@@ -159,6 +173,29 @@ wget -q -O- https://www.virtualbox.org/download/oracle_vbox_2016.asc \
     | apt-key add &>/dev/null
 apt-get update &>/dev/null
 apt-get -yqq install $VBOX_PACKAGE &>/dev/null 
+fi
+
+if [[ $INSTALL_GNU_ICECAT = true ]];
+then
+    echo "Installing GNU icecat..."
+    wget -O /tmp/icecat.tar.bz2 $GNU_ICECAT_TAR &> /dev/null
+    # TODO add signature checking
+    # wget -O /tmp/icecat.tar.bz2.sig $GNU_ICECAT_TAR.sig &> /dev/null
+    tar -xvf /tmp/icecat.tar.bz2 -C /opt/ && mv /opt/*icecat* /opt/icecat &> /dev/null
+    ln -sf /opt/icecat/icecat /usr/local/bin/icecat
+    rm -rf /tmp/icecat.tar.bz2
+    /bin/cat <<EOM >/usr/share/applications/icecat.desktop
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GNU Icecat
+Comment=Browse the World Wide Web
+Exec=/opt/icecat/icecat
+Terminal=false
+X-MultipleArgs=false
+Icon=/opt/icecat/browser/chrome/icons/default/default128.png
+Categories=Network;WebBrowser;
+EOM
 fi
 
 echo "Replacing the default host file..."
