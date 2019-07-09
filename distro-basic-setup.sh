@@ -193,7 +193,7 @@ Comment=Browse the World Wide Web
 Exec=/opt/icecat/icecat
 Terminal=false
 X-MultipleArgs=false
-Icon=/opt/icecat/browser/chrome/icons/default/default128.png
+Icon=/opt/icecat/browser/chrome/icons/default/default16.png
 Categories=Network;WebBrowser;
 EOM
 fi
